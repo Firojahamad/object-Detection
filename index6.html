@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Detection with ml5.js</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        #toggleButton {
+            position: fixed;
+            top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            z-index: 100;
+        }
+        #videoContainer {
+            position: relative;
+            width: 640px;
+            height: auto;
+            margin-top: 50px; /* Ensures space for the button */
+        }
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggleButton">Turn Camera Off</button>
+    <div id="videoContainer">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        let video;
+        let objectDetector;
+        let isCameraOn = true;
+
+        function setup() {
+            const canvas = createCanvas(640, 480);
+            canvas.parent('videoContainer');
+
+            startCamera();
+
+            // Add event listener to toggle the camera on/off
+            document.getElementById('toggleButton').addEventListener('click', toggleCamera);
+        }
+
+        function startCamera() {
+            video = createCapture(VIDEO);
+            video.size(640, 480);
+            video.hide();
+
+            video.elt.onloadeddata = () => {
+                console.log('Video Loaded');
+                objectDetector = ml5.objectDetector('cocossd', modelReady);
+            };
+        }
+
+        function modelReady() {
+            console.log('Model Loaded!');
+            detectObjects();
+        }
+
+        function detectObjects() {
+            if (objectDetector && video.elt.readyState >= video.elt.HAVE_ENOUGH_DATA && isCameraOn) {
+                objectDetector.detect(video.elt, gotResults);
+            } else {
+                requestAnimationFrame(detectObjects); // Retry until the video is ready or camera is on
+            }
+        }
+
+        function gotResults(err, results) {
+            if (err) {
+                console.error(err);
+                return;
+            }
+            console.log(results); // Print detected object names in console
+            drawResults(results);
+            detectObjects(); // Continuously detect objects
+        }
+
+        function drawResults(results) {
+            image(video, 0, 0);
+            results.forEach(result => {
+                noFill();
+                stroke(0, 255, 0);
+                rect(result.x, result.y, result.width, result.height);
+                noStroke();
+                fill(255);
+                textSize(24);
+                text(result.label, result.x + 10, result.y + 24);
+            });
+        }
+
+        // Toggle the camera on and off
+        function toggleCamera() {
+            if (isCameraOn) {
+                video.stop(); // Stops the video stream
+                document.getElementById('toggleButton').textContent = "Turn Camera On";
+            } else {
+                startCamera(); // Restarts the video stream
+                document.getElementById('toggleButton').textContent = "Turn Camera Off";
+            }
+            isCameraOn = !isCameraOn;
+        }
+
+        // Initialize p5.js
+        new p5();
+    </script>
+</body>
+</html>
