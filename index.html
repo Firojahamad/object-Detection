@@ -17,18 +17,25 @@
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
         }
-        #toggleButton {
+        #toggleButton, #switchCameraButton {
             position: fixed;
             top: 10px;
             padding: 10px 20px;
             font-size: 16px;
             z-index: 100;
+            margin-right: 10px;
+        }
+        #toggleButton {
+            left: 10px;
+        }
+        #switchCameraButton {
+            right: 10px;
         }
         #videoContainer {
             position: relative;
             width: 640px;
             height: auto;
-            margin-top: 50px; /* Ensures space for the button */
+            margin-top: 50px; /* Ensures space for the buttons */
         }
         video {
             width: 100%;
@@ -46,6 +53,7 @@
 </head>
 <body>
     <button id="toggleButton">Turn Camera Off</button>
+    <button id="switchCameraButton">Switch Camera</button>
     <div id="videoContainer">
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas"></canvas>
@@ -55,19 +63,33 @@
         let video;
         let objectDetector;
         let isCameraOn = true;
+        let currentFacingMode = 'environment'; // Default to back camera
 
         function setup() {
             const canvas = createCanvas(640, 480);
             canvas.parent('videoContainer');
 
-            startCamera();
+            startCamera(currentFacingMode);
 
-            // Add event listener to toggle the camera on/off
+            // Add event listeners for the buttons
             document.getElementById('toggleButton').addEventListener('click', toggleCamera);
+            document.getElementById('switchCameraButton').addEventListener('click', switchCamera);
         }
 
-        function startCamera() {
-            video = createCapture(VIDEO);
+        function startCamera(facingMode) {
+            // Stop the current video stream if any
+            if (video) {
+                video.stop();
+            }
+
+            // Define constraints to use the desired camera (front or back)
+            const constraints = {
+                video: {
+                    facingMode: { exact: facingMode } // 'user' for front, 'environment' for back
+                }
+            };
+
+            video = createCapture(constraints);
             video.size(640, 480);
             video.hide();
 
@@ -119,10 +141,16 @@
                 video.stop(); // Stops the video stream
                 document.getElementById('toggleButton').textContent = "Turn Camera On";
             } else {
-                startCamera(); // Restarts the video stream
+                startCamera(currentFacingMode); // Restarts the video stream
                 document.getElementById('toggleButton').textContent = "Turn Camera Off";
             }
             isCameraOn = !isCameraOn;
+        }
+
+        // Switch between front and back cameras
+        function switchCamera() {
+            currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+            startCamera(currentFacingMode); // Restart the camera with the new facing mode
         }
 
         // Initialize p5.js
